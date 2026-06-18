@@ -9,6 +9,7 @@ from typing import Optional
 from app.database import get_db
 from app.models import Alert, AlertStatus, Document, WorkspaceMember, User
 from app.auth import get_current_user
+from app.services.email import send_deadline_alert
 
 router = APIRouter()
 
@@ -45,6 +46,12 @@ class AlertResponse(BaseModel):
     days_until_deadline: Optional[int] = None
     created_at: datetime
     model_config = {"from_attributes": True}
+
+
+class TestEmailResponse(BaseModel):
+    sent: bool
+    to_email: str
+    message: str
 
 
 async def get_workspace_id(user, db):
@@ -101,6 +108,22 @@ async def upcoming_alerts(days: int = 30, db: AsyncSession = Depends(get_db), cu
         .order_by(Alert.deadline_date.asc())
     )
     return [AlertResponse(**enrich_alert(a)) for a in result.scalars().all()]
+
+
+@router.post("/test-email", response_model=TestEmailResponse)
+async def send_test_email(current_user: User = Depends(get_current_user)):
+    sent = send_deadline_alert(
+        to_email=current_user.email,
+        document_name="DocIQ test document",
+        alert_title="Email configuration test",
+        deadline_date=datetime.utcnow(),
+        days_until=0,
+    )
+    return TestEmailResponse(
+        sent=sent,
+        to_email=current_user.email,
+        message="Test email sent" if sent else "Email send failed. Check backend logs.",
+    )
 
 
 @router.put("/{alert_id}", response_model=AlertResponse)

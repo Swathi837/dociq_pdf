@@ -6,6 +6,8 @@ export default function AlertsPage() {
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('all')
+  const [testEmailMsg, setTestEmailMsg] = useState('')
+  const [sendingTestEmail, setSendingTestEmail] = useState(false)
 
   useEffect(() => { loadAlerts() }, [])
 
@@ -29,6 +31,19 @@ export default function AlertsPage() {
     loadAlerts()
   }
 
+  async function sendTestEmail() {
+    setSendingTestEmail(true)
+    setTestEmailMsg('')
+    try {
+      const res = await API.post('/alerts/test-email')
+      setTestEmailMsg(`${res.data.message} to ${res.data.to_email}`)
+    } catch (e) {
+      setTestEmailMsg(e.response?.data?.detail || 'Test email failed. Check backend logs.')
+    } finally {
+      setSendingTestEmail(false)
+    }
+  }
+
   function daysColor(days) {
     if (days === undefined || days === null) return ''
     if (days <= 3) return 'days-urgent'
@@ -42,8 +57,19 @@ export default function AlertsPage() {
     <div>
       <div className="section-header">
         <h1 className="section-title">Deadline Alerts</h1>
-        <Link to="/documents" className="btn btn-primary">+ Add from Document</Link>
+        <div className="flex-center">
+          <button onClick={sendTestEmail} className="btn btn-secondary" disabled={sendingTestEmail}>
+            {sendingTestEmail ? 'Sending...' : 'Send test email'}
+          </button>
+          <Link to="/documents" className="btn btn-primary">+ Add from Document</Link>
+        </div>
       </div>
+
+      {testEmailMsg && (
+        <div className={testEmailMsg.toLowerCase().includes('failed') ? 'error-msg' : 'success-msg'}>
+          {testEmailMsg}
+        </div>
+      )}
 
       <div className="tabs">
         {['all', 'active', 'triggered', 'dismissed'].map(t => (
