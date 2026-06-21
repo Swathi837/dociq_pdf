@@ -83,7 +83,7 @@ async def create_alert(body: AlertCreate, db: AsyncSession = Depends(get_db), cu
     if not doc or doc.workspace_id != wid:
         raise HTTPException(404, "Document not found")
     alert = Alert(workspace_id=wid, document_id=body.document_id, created_by=current_user.id,
-                  title=body.title, description=body.description, deadline_date=body.deadline_date,
+                  title=body.title, description=body.description, deadline_date=body.deadline_date.replace(tzinfo=None),
                   notify_days_before=body.notify_days_before, notify_email=body.notify_email, notify_slack=body.notify_slack)
     db.add(alert)
     await db.commit()
